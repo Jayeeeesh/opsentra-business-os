@@ -4,6 +4,7 @@ const cookieParser = require("cookie-parser");
 
 const projectRoutes = require("./routes/projectRoutes");
 const authRoutes = require("./routes/authRoutes");
+const { notFound, errorHandler } = require("./middleware/errorHandler");
 
 const app = express();
 const CLIENT_URL = process.env.CLIENT_URL || "http://localhost:5173";
@@ -30,5 +31,8 @@ app.get("/api/health", (req, res) => {
     status: "ok",
   });
 });
+
+app.use(notFound);
+app.use(errorHandler);
 
 module.exports = app;
