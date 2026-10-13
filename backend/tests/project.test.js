@@ -79,8 +79,11 @@ test("POST /api/projects rejects invalid priority", async () => {
   });
 
   assert.equal(response.statusCode, 400);
-  assert.equal(response.body.message, "Project validation failed");
-  assert.ok(response.body.errors.priority);
+  assert.equal(response.body.message, "Invalid request data");
+
+  assert.ok(
+    response.body.errors.some((error) => error.path.includes("priority")),
+  );
 });
 
 test("GET /api/projects returns only the authenticated user's projects", async () => {
@@ -223,8 +226,11 @@ test("PATCH /api/projects/:id rejects invalid priority", async () => {
   });
 
   assert.equal(response.statusCode, 400);
-  assert.equal(response.body.message, "Project validation failed");
-  assert.ok(response.body.errors.priority);
+  assert.equal(response.body.message, "Invalid request data");
+
+  assert.ok(
+    response.body.errors.some((error) => error.path.includes("priority")),
+  );
 });
 
 test("DELETE /api/projects/:id deletes the authenticated user's project", async () => {
