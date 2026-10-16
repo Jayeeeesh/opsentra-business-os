@@ -14,10 +14,31 @@ const normalizeProject = (project) => {
 
 function ProjectsProvider({ children }) {
   const [projects, setProjects] = useState([]);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 10,
+    total: 0,
+    totalPages: 1,
+  });
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [status, setStatus] = useState("All");
+  const [priority, setPriority] = useState("All");
+  const [sort, setSort] = useState("newest");
   const [error, setError] = useState("");
   const [loadedForUserId, setLoadedForUserId] = useState(null);
   const { user, isLoading: isAuthLoading } = useAuth();
   const userId = user?._id ?? user?.id ?? null;
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 400);
+
+    return () => {
+      clearTimeout(timeoutId);
+    };
+  }, [search]);
 
   useEffect(() => {
     if (isAuthLoading || !userId) {
@@ -26,9 +47,12 @@ function ProjectsProvider({ children }) {
 
     const fetchProjects = async () => {
       try {
-        const response = await fetch(`${API_URL}/api/projects`, {
-          credentials: "include",
-        });
+        const response = await fetch(
+          `${API_URL}/api/projects?page=${pagination.page}&limit=${pagination.limit}&search=${encodeURIComponent(debouncedSearch)}&status=${encodeURIComponent(status)}&priority=${encodeURIComponent(priority)}&sort=${encodeURIComponent(sort)}`,
+          {
+            credentials: "include",
+          },
+        );
 
         const data = await response.json();
 
@@ -36,8 +60,9 @@ function ProjectsProvider({ children }) {
           throw new Error(data.message || "Failed to fetch projects");
         }
 
-        const normalizedProjects = data.map(normalizeProject);
+        const normalizedProjects = data.projects.map(normalizeProject);
         setProjects(normalizedProjects);
+        setPagination(data.pagination);
         setError("");
         setLoadedForUserId(userId);
       } catch (error) {
@@ -48,7 +73,16 @@ function ProjectsProvider({ children }) {
     };
 
     fetchProjects();
-  }, [userId, isAuthLoading]);
+  }, [
+    userId,
+    isAuthLoading,
+    pagination.page,
+    pagination.limit,
+    debouncedSearch,
+    status,
+    priority,
+    sort,
+  ]);
 
   const addProject = async (project) => {
     const response = await fetch(`${API_URL}/api/projects`, {
@@ -105,6 +139,48 @@ function ProjectsProvider({ children }) {
     );
   };
 
+  const changePage = (newPage) => {
+    setPagination((prev) => ({
+      ...prev,
+      page: newPage,
+    }));
+  };
+
+  const changeSearch = (newSearch) => {
+    setSearch(newSearch);
+
+    setPagination((prev) => ({
+      ...prev,
+      page: 1,
+    }));
+  };
+
+  const changeStatus = (newStatus) => {
+    setStatus(newStatus);
+
+    setPagination((prev) => ({
+      ...prev,
+      page: 1,
+    }));
+  };
+
+  const changePriority = (newPriority) => {
+    setPriority(newPriority);
+
+    setPagination((prev) => ({
+      ...prev,
+      page: 1,
+    }));
+  };
+
+  const changeSort = (newSort) => {
+    setSort(newSort);
+
+    setPagination((prev) => ({
+      ...prev,
+      page: 1,
+    }));
+  };
   const hasLoadedCurrentUser = Boolean(userId) && loadedForUserId === userId;
   const visibleProjects = hasLoadedCurrentUser ? projects : [];
   const visibleError = hasLoadedCurrentUser ? error : "";
@@ -112,13 +188,22 @@ function ProjectsProvider({ children }) {
 
   const value = {
     projects: visibleProjects,
+    pagination,
+    search,
+    changePage,
+    changeSearch,
+    status,
+    changeStatus,
     error: visibleError,
     isLoading,
     addProject,
     removeProject,
     updateProject,
+    priority,
+    changePriority,
+    sort,
+    changeSort,
   };
-
   return (
     <ProjectsContext.Provider value={value}>
       {children}

@@ -14,7 +14,7 @@ const { registerSchema, loginSchema } = require("../validation/authValidation");
 const router = express.Router();
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 10,
+  limit: process.env.NODE_ENV === "test" ? 100 : 10,
   message: {
     message: "Too many authentication attempts. Please try again later.",
   },

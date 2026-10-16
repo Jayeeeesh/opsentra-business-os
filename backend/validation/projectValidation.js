@@ -18,9 +18,26 @@ const createProjectSchema = z.object({
 
   description: z.string().trim().optional(),
 });
+const projectQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).optional(),
+  limit: z.coerce.number().int().min(1).max(50).optional(),
+
+  search: z.string().trim().max(100).optional(),
+
+  status: z
+    .enum(["All", "Planning", "In Progress", "On Hold", "Completed"])
+    .optional(),
+
+  priority: z.enum(["All", "Low", "Medium", "High"]).optional(),
+
+  sort: z
+    .enum(["newest", "oldest", "deadline-soonest", "budget-high", "budget-low"])
+    .optional(),
+});
 const updateProjectSchema = createProjectSchema.partial();
 
 module.exports = {
   createProjectSchema,
   updateProjectSchema,
+  projectQuerySchema,
 };

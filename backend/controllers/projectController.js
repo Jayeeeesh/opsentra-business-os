@@ -1,11 +1,64 @@
 const mongoose = require("mongoose");
 const Project = require("../models/Project");
 
+const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 const getProjects = async (req, res) => {
   try {
-    const projects = await Project.find({ owner: req.user.id });
+    const {
+      page = 1,
+      limit = 10,
+      search = "",
+      status = "All",
+      priority = "All",
+      sort = "newest",
+    } = req.validatedQuery;
 
-    res.json(projects);
+    const skip = (page - 1) * limit;
+
+    const filter = {
+      owner: req.user.id,
+    };
+    const sortOptions = {
+      newest: { createdAt: -1 },
+      oldest: { createdAt: 1 },
+      "deadline-soonest": { deadline: 1 },
+      "budget-high": { budget: -1 },
+      "budget-low": { budget: 1 },
+    };
+
+    const sortOption = sortOptions[sort] || sortOptions.newest;
+    if (search) {
+      const escapedSearch = escapeRegex(search);
+
+      filter.$or = [
+        { name: { $regex: escapedSearch, $options: "i" } },
+        { client: { $regex: escapedSearch, $options: "i" } },
+      ];
+    }
+
+    if (status && status !== "All") {
+      filter.status = status;
+    }
+    if (priority && priority !== "All") {
+      filter.priority = priority;
+    }
+
+    const [projects, total] = await Promise.all([
+      Project.find(filter).sort(sortOption).skip(skip).limit(limit),
+
+      Project.countDocuments(filter),
+    ]);
+
+    res.json({
+      projects,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    });
   } catch (error) {
     res.status(500).json({
       message: "Failed to fetch projects",

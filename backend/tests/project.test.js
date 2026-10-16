@@ -127,8 +127,262 @@ test("GET /api/projects returns only the authenticated user's projects", async (
   const response = await agent.get("/api/projects");
 
   assert.equal(response.statusCode, 200);
-  assert.equal(response.body.length, 1);
-  assert.equal(response.body[0].name, "User A Project");
+
+  assert.equal(response.body.projects.length, 1);
+  assert.equal(response.body.projects[0].name, "User A Project");
+
+  assert.equal(response.body.pagination.page, 1);
+  assert.equal(response.body.pagination.limit, 10);
+  assert.equal(response.body.pagination.total, 1);
+  assert.equal(response.body.pagination.totalPages, 1);
+});
+
+test("GET /api/projects supports pagination", async () => {
+  const user = await User.create({
+    name: "Test User",
+    email: "test@example.com",
+    password: "password123",
+  });
+
+  await Project.create([
+    {
+      name: "Project One",
+      client: "Client A",
+      deadline: "2026-12-31",
+      budget: 10000,
+      owner: user._id,
+    },
+    {
+      name: "Project Two",
+      client: "Client B",
+      deadline: "2026-12-31",
+      budget: 20000,
+      owner: user._id,
+    },
+  ]);
+
+  const agent = request.agent(app);
+
+  await agent.post("/api/auth/login").send({
+    email: "test@example.com",
+    password: "password123",
+  });
+
+  const response = await agent.get("/api/projects?page=2&limit=1");
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.projects.length, 1);
+
+  assert.equal(response.body.pagination.page, 2);
+  assert.equal(response.body.pagination.limit, 1);
+  assert.equal(response.body.pagination.total, 2);
+  assert.equal(response.body.pagination.totalPages, 2);
+});
+
+test("GET /api/projects supports search", async () => {
+  const user = await User.create({
+    name: "Test User",
+    email: "test@example.com",
+    password: "password123",
+  });
+
+  await Project.create([
+    {
+      name: "Website Redesign",
+      client: "Acme Corporation",
+      deadline: "2026-12-31",
+      budget: 30000,
+      owner: user._id,
+    },
+    {
+      name: "Mobile App",
+      client: "Beta Labs",
+      deadline: "2026-12-31",
+      budget: 40000,
+      owner: user._id,
+    },
+  ]);
+
+  const agent = request.agent(app);
+
+  await agent.post("/api/auth/login").send({
+    email: "test@example.com",
+    password: "password123",
+  });
+
+  const response = await agent.get("/api/projects?search=acme");
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.projects.length, 1);
+  assert.equal(response.body.projects[0].name, "Website Redesign");
+  assert.equal(response.body.pagination.total, 1);
+});
+
+test("GET /api/projects treats regex special characters as literal search text", async () => {
+  const user = await User.create({
+    name: "Test User",
+    email: "test@example.com",
+    password: "password123",
+  });
+
+  await Project.create([
+    {
+      name: "Normal Project",
+      client: "Client A",
+      deadline: "2026-12-31",
+      budget: 10000,
+      owner: user._id,
+    },
+    {
+      name: "Project .* Special",
+      client: "Client B",
+      deadline: "2026-12-31",
+      budget: 20000,
+      owner: user._id,
+    },
+  ]);
+
+  const agent = request.agent(app);
+
+  await agent.post("/api/auth/login").send({
+    email: "test@example.com",
+    password: "password123",
+  });
+
+  const response = await agent.get(
+    `/api/projects?search=${encodeURIComponent(".*")}`,
+  );
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.projects.length, 1);
+  assert.equal(response.body.projects[0].name, "Project .* Special");
+});
+
+test("GET /api/projects supports status and priority filters", async () => {
+  const user = await User.create({
+    name: "Test User",
+    email: "test@example.com",
+    password: "password123",
+  });
+
+  await Project.create([
+    {
+      name: "High Planning Project",
+      client: "Client A",
+      status: "Planning",
+      priority: "High",
+      deadline: "2026-12-31",
+      budget: 50000,
+      owner: user._id,
+    },
+    {
+      name: "Medium Planning Project",
+      client: "Client B",
+      status: "Planning",
+      priority: "Medium",
+      deadline: "2026-12-31",
+      budget: 30000,
+      owner: user._id,
+    },
+    {
+      name: "High Completed Project",
+      client: "Client C",
+      status: "Completed",
+      priority: "High",
+      deadline: "2026-12-31",
+      budget: 40000,
+      owner: user._id,
+    },
+  ]);
+
+  const agent = request.agent(app);
+
+  await agent.post("/api/auth/login").send({
+    email: "test@example.com",
+    password: "password123",
+  });
+
+  const response = await agent.get(
+    "/api/projects?status=Planning&priority=High",
+  );
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.projects.length, 1);
+  assert.equal(response.body.projects[0].name, "High Planning Project");
+  assert.equal(response.body.pagination.total, 1);
+});
+
+test("GET /api/projects supports sorting by budget high to low", async () => {
+  const user = await User.create({
+    name: "Test User",
+    email: "test@example.com",
+    password: "password123",
+  });
+
+  await Project.create([
+    {
+      name: "Small Project",
+      client: "Client A",
+      deadline: "2026-12-31",
+      budget: 10000,
+      owner: user._id,
+    },
+    {
+      name: "Large Project",
+      client: "Client B",
+      deadline: "2026-12-31",
+      budget: 50000,
+      owner: user._id,
+    },
+    {
+      name: "Medium Project",
+      client: "Client C",
+      deadline: "2026-12-31",
+      budget: 30000,
+      owner: user._id,
+    },
+  ]);
+
+  const agent = request.agent(app);
+
+  await agent.post("/api/auth/login").send({
+    email: "test@example.com",
+    password: "password123",
+  });
+
+  const response = await agent.get("/api/projects?sort=budget-high");
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.projects.length, 3);
+
+  assert.equal(response.body.projects[0].name, "Large Project");
+  assert.equal(response.body.projects[1].name, "Medium Project");
+  assert.equal(response.body.projects[2].name, "Small Project");
+});
+
+test("GET /api/projects rejects invalid query parameters", async () => {
+  await User.create({
+    name: "Test User",
+    email: "test@example.com",
+    password: "password123",
+  });
+
+  const agent = request.agent(app);
+
+  await agent.post("/api/auth/login").send({
+    email: "test@example.com",
+    password: "password123",
+  });
+
+  const invalidPageResponse = await agent.get("/api/projects?page=-5");
+
+  assert.equal(invalidPageResponse.statusCode, 400);
+  assert.equal(invalidPageResponse.body.message, "Invalid query parameters");
+
+  const invalidSortResponse = await agent.get("/api/projects?sort=random");
+
+  assert.equal(invalidSortResponse.statusCode, 400);
+  assert.equal(invalidSortResponse.body.message, "Invalid query parameters");
 });
 
 test("GET /api/projects/:id blocks access to another user's project", async () => {
