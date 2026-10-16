@@ -1,9 +1,13 @@
 const express = require("express");
+const validateQuery = require("../middleware/validateQuery");
 const validateRequest = require("../middleware/validateRequest");
+
 const {
   createProjectSchema,
   updateProjectSchema,
+  projectQuerySchema,
 } = require("../validation/projectValidation");
+
 const {
   getProjects,
   createProject,
@@ -11,13 +15,14 @@ const {
   updateProject,
   deleteProject,
 } = require("../controllers/projectController");
+
 const protect = require("../middleware/authMiddleware");
 
 const routes = express.Router();
 
 routes.use(protect);
 
-routes.get("/", getProjects);
+routes.get("/", validateQuery(projectQuerySchema), getProjects);
 
 routes.post("/", validateRequest(createProjectSchema), createProject);
 
