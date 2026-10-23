@@ -1,110 +1,176 @@
 import { render, screen, within } from "@testing-library/react";
-import { afterEach, beforeEach, expect, test, vi } from "vitest";
-
+import { afterEach, expect, test, vi } from "vitest";
 import DashboardPage from "./DashboardPage";
 
-const { mockProjects } = vi.hoisted(() => ({
-  mockProjects: [],
-}));
+const summaryData = {
+  activeProjects: 1,
+  completedProjects: 2,
+  highPriorityProjects: 3,
+  overdueProjects: 1,
+  totalProjects: 10,
+};
 
-vi.mock("../hooks/useProjects", () => ({
-  default: () => ({
-    projects: mockProjects,
-  }),
-}));
+const mockApi = ({
+  projects = [],
+  summaryFails = false,
+  projectsFail = false,
+  pending = false,
+} = {}) => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn((url) => {
+      if (pending) return new Promise(() => {});
 
-beforeEach(() => {
-  mockProjects.length = 0;
-});
+      if (url.includes("/api/dashboard/summary")) {
+        if (summaryFails) {
+          return Promise.reject(new Error("Summary API failed"));
+        }
+
+        return Promise.resolve({
+          ok: true,
+          json: async () => summaryData,
+        });
+      }
+
+      if (url.includes("/api/projects?")) {
+        if (projectsFail) {
+          return Promise.reject(new Error("Projects API failed"));
+        }
+
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ projects }),
+        });
+      }
+
+      return Promise.reject(new Error(`Unexpected API: ${url}`));
+    }),
+  );
+};
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
-test("displays dashboard metrics from the summary API", async () => {
-  mockProjects.push(
+test("displays dashboard statistics", async () => {
+  mockApi();
+  render(<DashboardPage />);
+
+  const active = screen.getByText("Active Projects").closest("article");
+  const completed = screen.getByText("Completed Projects").closest("article");
+  const priority = screen
+    .getByText("High Priority Projects")
+    .closest("article");
+  const overdue = screen.getByText("Overdue Projects").closest("article");
+
+  expect(await within(active).findByText("1")).toBeInTheDocument();
+  expect(within(completed).getByText("2")).toBeInTheDocument();
+  expect(within(priority).getByText("3")).toBeInTheDocument();
+  expect(within(overdue).getByText("1")).toBeInTheDocument();
+});
+
+test("fetches the latest four projects independently", async () => {
+  const projects = [
     {
-      id: "1",
-      name: "Project A",
-      client: "Client A",
-      status: "In Progress",
-      priority: "High",
-      deadline: "2026-09-20",
-      createdAt: "2026-09-24T10:00:00Z",
-      progress: 50,
+      _id: "1",
+      name: "Hotel",
+      client: "A",
+      status: "Planning",
+      deadline: "2026-12-01",
+      progress: 10,
     },
     {
-      id: "2",
-      name: "Project B",
-      client: "Client B",
+      _id: "2",
+      name: "School",
+      client: "B",
       status: "Completed",
-      priority: "Medium",
-      deadline: "2026-09-10",
-      createdAt: "2026-09-23T10:00:00Z",
+      deadline: "2026-12-02",
       progress: 100,
     },
     {
-      id: "3",
-      name: "Project C",
-      client: "Client C",
-      status: "Planning",
-      priority: "High",
-      deadline: "2026-09-30",
-      createdAt: "2026-09-22T10:00:00Z",
-      progress: 10,
+      _id: "3",
+      name: "Hospital",
+      client: "C",
+      status: "In Progress",
+      deadline: "2026-12-03",
+      progress: 40,
     },
-  );
-  vi.stubGlobal(
-    "fetch",
-    vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        activeProjects: 1,
-        completedProjects: 1,
-        highPriorityProjects: 2,
-        overdueProjects: 1,
-        totalProjects: 3,
-      }),
+    {
+      _id: "4",
+      name: "Mall",
+      client: "D",
+      status: "On Hold",
+      deadline: "2026-12-04",
+      progress: 20,
+    },
+  ];
+
+  mockApi({ projects });
+  render(<DashboardPage />);
+
+  expect(await screen.findByText("Hotel")).toBeInTheDocument();
+  expect(screen.getByText("School")).toBeInTheDocument();
+  expect(screen.getByText("Hospital")).toBeInTheDocument();
+  expect(screen.getByText("Mall")).toBeInTheDocument();
+
+  expect(fetch).toHaveBeenCalledWith(
+    expect.stringContaining("/api/projects?page=1&limit=4&sort=newest"),
+    expect.objectContaining({
+      credentials: "include",
+      signal: expect.any(AbortSignal),
     }),
   );
 
-  render(<DashboardPage />);
-
-  const activeCard = screen.getByText("Active Projects").closest("article");
-  const completedCard = screen
-    .getByText("Completed Projects")
-    .closest("article");
-  const highPriorityCard = screen
-    .getByText("High Priority Projects")
-    .closest("article");
-  const overdueCard = screen.getByText("Overdue Projects").closest("article");
-  expect(await within(activeCard).findByText("1")).toBeInTheDocument();
-  expect(within(completedCard).getByText("1")).toBeInTheDocument();
-  expect(within(highPriorityCard).getByText("2")).toBeInTheDocument();
-  expect(within(overdueCard).getByText("1")).toBeInTheDocument();
+  expect(screen.getAllByRole("row")).toHaveLength(5);
 });
 
-test("shows loading message while the API is pending", () => {
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(() => new Promise(() => {})),
-  );
-
+test("shows both loading messages", () => {
+  mockApi({ pending: true });
   render(<DashboardPage />);
 
-  expect(screen.getByRole("status")).toHaveTextContent(
-    "Loading dashboard statistics...",
-  );
+  expect(
+    screen.getByText("Loading dashboard statistics..."),
+  ).toBeInTheDocument();
+  expect(screen.getByText("Loading recent projects...")).toBeInTheDocument();
 });
 
-test("shows error message when dashboard API fails", async () => {
-  vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("Network error")));
-
+test("shows error when summary API fails", async () => {
+  vi.spyOn(console, "error").mockImplementation(() => {});
+  mockApi({ summaryFails: true });
   render(<DashboardPage />);
 
-  expect(await screen.findByRole("alert")).toHaveTextContent(
-    "Unable to load dashboard statistics.",
-  );
+  expect(
+    await screen.findByText("Unable to load dashboard statistics."),
+  ).toBeInTheDocument();
 
-  expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  expect(
+    screen.queryByText("Loading dashboard statistics..."),
+  ).not.toBeInTheDocument();
+  expect(
+    await screen.findByText("No recent projects yet."),
+  ).toBeInTheDocument();
+});
+
+test("shows error when recent projects API fails", async () => {
+  vi.spyOn(console, "error").mockImplementation(() => {});
+  mockApi({ projectsFail: true });
+  render(<DashboardPage />);
+
+  expect(
+    await screen.findByText("Unable to load recent projects."),
+  ).toBeInTheDocument();
+
+  expect(
+    screen.queryByText("Loading recent projects..."),
+  ).not.toBeInTheDocument();
+});
+
+test("shows empty state when no projects exist", async () => {
+  mockApi({ projects: [] });
+  render(<DashboardPage />);
+
+  expect(
+    await screen.findByText("No recent projects yet."),
+  ).toBeInTheDocument();
 });
