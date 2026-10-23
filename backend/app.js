@@ -9,6 +9,7 @@ const logger = require("./config/logger");
 const projectRoutes = require("./routes/projectRoutes");
 const authRoutes = require("./routes/authRoutes");
 const { notFound, errorHandler } = require("./middleware/errorHandler");
+const dashboardRoutes = require("./routes/dashboardRoutes");
 
 const app = express();
 
@@ -34,6 +35,7 @@ app.use(
 
 app.use("/api/projects", projectRoutes);
 app.use("/api/auth", authRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 
 app.get("/", (req, res) => {
   res.json({ message: "Opsentra API is running" });

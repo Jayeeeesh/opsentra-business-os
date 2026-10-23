@@ -14,16 +14,14 @@ vi.mock("../hooks/useProjects", () => ({
 }));
 
 beforeEach(() => {
-  vi.useFakeTimers();
-  vi.setSystemTime(new Date("2026-09-24T12:00:00"));
   mockProjects.length = 0;
 });
 
 afterEach(() => {
-  vi.useRealTimers();
+  vi.unstubAllGlobals();
 });
 
-test("calculates dashboard metrics from projects", () => {
+test("displays dashboard metrics from the summary API", async () => {
   mockProjects.push(
     {
       id: "1",
@@ -56,6 +54,19 @@ test("calculates dashboard metrics from projects", () => {
       progress: 10,
     },
   );
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        activeProjects: 1,
+        completedProjects: 1,
+        highPriorityProjects: 2,
+        overdueProjects: 1,
+        totalProjects: 3,
+      }),
+    }),
+  );
 
   render(<DashboardPage />);
 
@@ -67,9 +78,33 @@ test("calculates dashboard metrics from projects", () => {
     .getByText("High Priority Projects")
     .closest("article");
   const overdueCard = screen.getByText("Overdue Projects").closest("article");
-
-  expect(within(activeCard).getByText("1")).toBeInTheDocument();
+  expect(await within(activeCard).findByText("1")).toBeInTheDocument();
   expect(within(completedCard).getByText("1")).toBeInTheDocument();
   expect(within(highPriorityCard).getByText("2")).toBeInTheDocument();
   expect(within(overdueCard).getByText("1")).toBeInTheDocument();
+});
+
+test("shows loading message while the API is pending", () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(() => new Promise(() => {})),
+  );
+
+  render(<DashboardPage />);
+
+  expect(screen.getByRole("status")).toHaveTextContent(
+    "Loading dashboard statistics...",
+  );
+});
+
+test("shows error message when dashboard API fails", async () => {
+  vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("Network error")));
+
+  render(<DashboardPage />);
+
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "Unable to load dashboard statistics.",
+  );
+
+  expect(screen.queryByRole("status")).not.toBeInTheDocument();
 });
