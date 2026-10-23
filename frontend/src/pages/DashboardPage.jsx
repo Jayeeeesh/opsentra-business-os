@@ -7,13 +7,15 @@ import {
 
 import StatCard from "../components/dashboard/StatCard";
 import RecentProjects from "../components/dashboard/RecentProjects";
-import useProjects from "../hooks/useProjects";
 import { useState, useEffect } from "react";
 
 function DashboardPage() {
   const [summary, setSummary] = useState(null);
   const [isSummaryLoading, setIsSummaryLoading] = useState(true);
   const [summaryError, setSummaryError] = useState("");
+  const [latestProjects, setLatestProjects] = useState([]);
+  const [isLatestProjectsLoading, setIsLatestProjectsLoading] = useState(true);
+  const [latestProjectsError, setLatestProjectsError] = useState("");
   useEffect(() => {
     const controller = new AbortController();
 
@@ -52,7 +54,50 @@ function DashboardPage() {
 
     return () => controller.abort();
   }, []);
-  const { projects } = useProjects();
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    const fetchLatestProjects = async () => {
+      try {
+        const response = await fetch(
+          `${import.meta.env.VITE_API_URL}/api/projects?page=1&limit=4&sort=newest`,
+          {
+            credentials: "include",
+            signal: controller.signal,
+          },
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch latest projects");
+        }
+
+        const data = await response.json();
+
+        if (!controller.signal.aborted) {
+          setLatestProjects(
+            data.projects.map((project) => ({
+              ...project,
+              id: project._id,
+            })),
+          );
+        }
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          console.error("Failed to load recent projects:", error);
+          setLatestProjectsError("Unable to load recent projects.");
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsLatestProjectsLoading(false);
+        }
+      }
+    };
+
+    fetchLatestProjects();
+
+    return () => controller.abort();
+  }, []);
 
   const activeProjectsCount = summary?.activeProjects ?? "—";
 
@@ -61,10 +106,6 @@ function DashboardPage() {
   const highPriorityProjectsCount = summary?.highPriorityProjects ?? "—";
 
   const overdueProjectsCount = summary?.overdueProjects ?? "—";
-
-  const recentProjects = [...projects]
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-    .slice(0, 4);
 
   const dashboardStats = [
     {
@@ -125,7 +166,19 @@ function DashboardPage() {
         ))}
       </div>
 
-      <RecentProjects projects={recentProjects} />
+      {isLatestProjectsLoading ? (
+        <p role="status" className="mt-6 text-sm text-slate-500">
+          Loading recent projects...
+        </p>
+      ) : latestProjectsError ? (
+        <p role="alert" className="mt-6 text-sm text-red-600">
+          {latestProjectsError}
+        </p>
+      ) : latestProjects.length === 0 ? (
+        <p className="mt-6 text-sm text-slate-500">No recent projects yet.</p>
+      ) : (
+        <RecentProjects projects={latestProjects} />
+      )}
     </section>
   );
 }
