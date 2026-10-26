@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const Project = require("../models/Project");
+const Task = require("../models/Task");
 
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
@@ -192,6 +193,10 @@ const deleteProject = async (req, res) => {
         message: "Project not found",
       });
     }
+
+    await Task.deleteMany({
+      project: deletedProject._id,
+    });
 
     return res.status(200).json({
       message: "Project deleted successfully",
