@@ -1,5 +1,6 @@
 import { useParams, Link } from "react-router";
 import useProjects from "../hooks/useProjects";
+import ProjectTasks from "../components/tasks/ProjectTasks";
 
 function ProjectDetailsPage() {
   const { projectId } = useParams();
@@ -95,6 +96,8 @@ function ProjectDetailsPage() {
           {project.description || "No description available."}
         </p>
       </div>
+
+      <ProjectTasks projectId={projectId} />
 
       <div className="mt-8 flex flex-wrap gap-3">
         <Link
