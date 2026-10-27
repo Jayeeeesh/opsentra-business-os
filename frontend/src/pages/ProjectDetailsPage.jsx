@@ -1,14 +1,59 @@
+import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router";
-import useProjects from "../hooks/useProjects";
 import ProjectTasks from "../components/tasks/ProjectTasks";
 
 function ProjectDetailsPage() {
   const { projectId } = useParams();
-  const { projects, error, isLoading } = useProjects();
+  const [projectData, setProjectData] = useState(null);
+  const [projectLoading, setProjectLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const project = projects.find((item) => String(item.id) === projectId);
+  useEffect(() => {
+    const controller = new AbortController();
 
-  if (isLoading) {
+    const fetchProject = async () => {
+      setProjectLoading(true);
+      setError("");
+      setProjectData(null);
+      try {
+        const response = await fetch(
+          `${import.meta.env.VITE_API_URL}/api/projects/${projectId}`,
+          {
+            credentials: "include",
+            signal: controller.signal,
+          },
+        );
+
+        if (response.status === 404) return;
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch project");
+        }
+
+        const data = await response.json();
+
+        if (!controller.signal.aborted) {
+          setProjectData(data);
+        }
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          setError(error.message);
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setProjectLoading(false);
+        }
+      }
+    };
+
+    fetchProject();
+
+    return () => controller.abort();
+  }, [projectId]);
+
+  const project = projectData ? { ...projectData, id: projectData._id } : null;
+
+  if (projectLoading) {
     return (
       <section>
         <p className="text-sm text-slate-500">Loading project...</p>
