@@ -279,20 +279,28 @@ Success response:
 ```
 
 ```json
-[
-  {
-    "_id": "PROJECT_ID",
-    "name": "Retail Expansion Program",
-    "client": "Meridian Retail Pvt. Ltd.",
-    "status": "In Progress",
-    "priority": "High",
-    "deadline": "2026-10-15T00:00:00.000Z",
-    "budget": 850000,
-    "progress": 70,
-    "description": "Expansion and refurbishment initiative.",
-    "owner": "USER_ID"
+{
+  "projects": [
+    {
+      "_id": "PROJECT_ID",
+      "name": "Retail Expansion Program",
+      "client": "Meridian Retail Pvt. Ltd.",
+      "status": "In Progress",
+      "priority": "High",
+      "deadline": "2026-10-15T00:00:00.000Z",
+      "budget": 850000,
+      "progress": 70,
+      "description": "Expansion and refurbishment initiative.",
+      "owner": "USER_ID"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 10,
+    "total": 1,
+    "totalPages": 1
   }
-]
+}
 ```
 
 ---
@@ -497,6 +505,97 @@ Project not found or not owned by the authenticated user:
   "message": "Project not found"
 }
 ```
+
+---
+
+## Task Endpoints
+
+All task endpoints require authentication. Users can only access tasks belonging to their own projects.
+
+### Create Task
+
+`POST /api/projects/:projectId/tasks`
+
+Request:
+
+```json
+{
+  "title": "Design dashboard",
+  "description": "Create dashboard UI",
+  "status": "To Do",
+  "priority": "High",
+  "dueDate": "2026-11-10"
+}
+```
+
+Success: `201 Created`
+
+Returns the created task.
+
+### Get Project Tasks
+
+`GET /api/projects/:projectId/tasks`
+
+Success: `200 OK`
+
+```json
+{
+  "tasks": [
+    {
+      "_id": "TASK_ID",
+      "title": "Design dashboard",
+      "description": "Create dashboard UI",
+      "project": "PROJECT_ID",
+      "status": "To Do",
+      "priority": "High",
+      "dueDate": "2026-11-10T00:00:00.000Z"
+    }
+  ]
+}
+```
+
+### Update Task
+
+`PATCH /api/projects/:projectId/tasks/:taskId`
+
+Request:
+
+```json
+{
+  "status": "Completed"
+}
+```
+
+Success: `200 OK`
+
+Returns the updated task.
+
+### Delete Task
+
+`DELETE /api/projects/:projectId/tasks/:taskId`
+
+Success: `200 OK`
+
+```json
+{
+  "message": "Task deleted successfully"
+}
+```
+
+### Task Validation and Errors
+
+- `title`: Required for creation, 1–120 characters.
+- `description`: Optional, maximum 2000 characters.
+- `status`: To Do, In Progress, Completed.
+- `priority`: Low, Medium, High.
+- `dueDate`: Optional, valid date.
+
+Possible error responses:
+
+- `400 Bad Request` — Invalid ID or request data.
+- `401 Unauthorized` — Authentication required.
+- `404 Not Found` — Project or task not found, or project not owned by user.
+- `500 Internal Server Error` — Server failure.
 
 ---
 
