@@ -136,7 +136,21 @@ function ProjectTasks({ projectId }) {
         <ul className="mt-4 space-y-3">
           {tasks.map((task) => (
             <li key={task._id} className="rounded-lg border p-3">
-              <p className="font-medium">{task.title}</p>
+              <div className="flex items-center justify-between gap-3">
+                <p className="font-medium">{task.title}</p>
+
+                <span
+                  className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                    task.priority === "High"
+                      ? "bg-red-100 text-red-700"
+                      : task.priority === "Low"
+                        ? "bg-green-100 text-green-700"
+                        : "bg-yellow-100 text-yellow-700"
+                  }`}
+                >
+                  {task.priority ?? "Medium"}
+                </span>
+              </div>
               <select
                 value={task.status}
                 onChange={(event) =>
