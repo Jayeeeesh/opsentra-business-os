@@ -4,6 +4,7 @@ const API_URL = import.meta.env.VITE_API_URL;
 
 function AddTaskForm({ projectId, onTaskCreated }) {
   const [title, setTitle] = useState("");
+  const [priority, setPriority] = useState("Medium");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -26,6 +27,7 @@ function AddTaskForm({ projectId, onTaskCreated }) {
           },
           body: JSON.stringify({
             title: title.trim(),
+            priority: priority,
           }),
         },
       );
@@ -38,6 +40,7 @@ function AddTaskForm({ projectId, onTaskCreated }) {
 
       onTaskCreated(data);
       setTitle("");
+      setPriority("Medium");
     } catch (error) {
       setError(error.message);
     } finally {
@@ -59,6 +62,19 @@ function AddTaskForm({ projectId, onTaskCreated }) {
         placeholder="Enter task title"
         className="rounded-lg border border-slate-300 p-3"
       />
+
+      <label htmlFor="task-priority">Priority</label>
+
+      <select
+        id="task-priority"
+        value={priority}
+        onChange={(e) => setPriority(e.target.value)}
+        className="rounded-lg border border-slate-300 p-3"
+      >
+        <option value="Low">Low</option>
+        <option value="Medium">Medium</option>
+        <option value="High">High</option>
+      </select>
 
       {error && (
         <p role="alert" className="text-red-600">
