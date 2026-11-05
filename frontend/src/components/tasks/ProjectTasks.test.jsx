@@ -6,6 +6,7 @@ const task = {
   _id: "task-1",
   title: "Build Login API",
   status: "To Do",
+  priority: "High",
 };
 
 function mockTaskApi() {
@@ -49,6 +50,13 @@ test("displays project tasks", async () => {
   render(<ProjectTasks projectId="project-1" />);
 
   expect(await screen.findByText("Build Login API")).toBeInTheDocument();
+
+  const highBadge = screen
+    .getAllByText("High")
+    .find((element) => element.tagName === "SPAN");
+
+  expect(highBadge).toBeInTheDocument();
+  expect(highBadge).toHaveClass("bg-red-100", "text-red-700");
 });
 
 test("updates task status", async () => {
