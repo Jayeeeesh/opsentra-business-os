@@ -45,7 +45,7 @@ test("creates a task and clears the form", async () => {
     expect.objectContaining({
       method: "POST",
       credentials: "include",
-      body: JSON.stringify({ title: "Fix Navbar" }),
+      body: JSON.stringify({ title: "Fix Navbar", priority: "Medium" }),
     }),
   );
 
@@ -83,4 +83,55 @@ test("shows error when task creation fails", async () => {
 
   expect(onTaskCreated).not.toHaveBeenCalled();
   expect(input).toHaveValue("Fix Navbar");
+});
+
+test("sends selected High priority and resets the form", async () => {
+  const onTaskCreated = vi.fn();
+
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        _id: "task-3",
+        title: "Fix Security Bug",
+        priority: "High",
+      }),
+    }),
+  );
+
+  render(<AddTaskForm projectId="project-1" onTaskCreated={onTaskCreated} />);
+
+  const titleInput = screen.getByRole("textbox", {
+    name: "Task Title",
+  });
+
+  const prioritySelect = screen.getByRole("combobox", {
+    name: "Priority",
+  });
+
+  fireEvent.change(titleInput, {
+    target: { value: "Fix Security Bug" },
+  });
+
+  fireEvent.change(prioritySelect, {
+    target: { value: "High" },
+  });
+
+  fireEvent.click(screen.getByRole("button", { name: "Add Task" }));
+
+  await waitFor(() => {
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringContaining("/api/projects/project-1/tasks"),
+      expect.objectContaining({
+        body: JSON.stringify({
+          title: "Fix Security Bug",
+          priority: "High",
+        }),
+      }),
+    );
+
+    expect(titleInput).toHaveValue("");
+    expect(prioritySelect).toHaveValue("Medium");
+  });
 });
