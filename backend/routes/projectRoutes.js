@@ -1,6 +1,7 @@
 const express = require("express");
 const validateQuery = require("../middleware/validateQuery");
 const validateRequest = require("../middleware/validateRequest");
+const requireProjectAccess = require("../middleware/requireProjectAccess");
 const {
   createTask,
   getTasks,
@@ -27,36 +28,86 @@ const {
   deleteProject,
 } = require("../controllers/projectController");
 
+const {
+  addProjectMember,
+  updateMemberRole,
+  removeProjectMember,
+} = require("../controllers/projectMemberController");
+
 const protect = require("../middleware/authMiddleware");
 
 const routes = express.Router();
 
 routes.use(protect);
 
+// ========== PROJECT ROUTES ==========
+
 routes.get("/", validateQuery(projectQuerySchema), getProjects);
 
 routes.post("/", validateRequest(createProjectSchema), createProject);
 
-routes.get("/:projectId", getProjectById);
+routes.get(
+  "/:projectId",
+  requireProjectAccess(["Owner", "Editor", "Viewer"]),
+  getProjectById,
+);
 
 routes.patch(
   "/:projectId",
+  requireProjectAccess(["Owner"]),
   validateRequest(updateProjectSchema),
   updateProject,
 );
 
-routes.delete("/:projectId", deleteProject);
+// Only project owner can delete a project
+routes.delete("/:projectId", requireProjectAccess(["Owner"]), deleteProject);
 
-routes.post("/:projectId/tasks", validateRequest(createTaskSchema), createTask);
+// ========== TASK ROUTES ==========
 
-routes.get("/:projectId/tasks", getTasks);
+routes.post(
+  "/:projectId/tasks",
+  requireProjectAccess(["Owner", "Editor"]),
+  validateRequest(createTaskSchema),
+  createTask,
+);
+
+routes.get(
+  "/:projectId/tasks",
+  requireProjectAccess(["Owner", "Editor", "Viewer"]),
+  getTasks,
+);
 
 routes.patch(
   "/:projectId/tasks/:taskId",
+  requireProjectAccess(["Owner", "Editor"]),
   validateRequest(updateTaskSchema),
   updateTask,
 );
 
-routes.delete("/:projectId/tasks/:taskId", deleteTask);
+routes.delete(
+  "/:projectId/tasks/:taskId",
+  requireProjectAccess(["Owner", "Editor"]),
+  deleteTask,
+);
+
+// ========== MEMBER ROUTES ==========
+
+routes.post(
+  "/:projectId/members",
+  requireProjectAccess(["Owner"]),
+  addProjectMember,
+);
+
+routes.patch(
+  "/:projectId/members/:userId",
+  requireProjectAccess(["Owner"]),
+  updateMemberRole,
+);
+
+routes.delete(
+  "/:projectId/members/:userId",
+  requireProjectAccess(["Owner"]),
+  removeProjectMember,
+);
 
 module.exports = routes;
