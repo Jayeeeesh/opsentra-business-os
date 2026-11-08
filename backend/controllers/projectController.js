@@ -18,7 +18,7 @@ const getProjects = async (req, res) => {
     const skip = (page - 1) * limit;
 
     const filter = {
-      owner: req.user.id,
+      $or: [{ owner: req.user.id }, { "members.user": req.user.id }],
     };
     const sortOptions = {
       newest: { createdAt: -1 },
@@ -32,9 +32,13 @@ const getProjects = async (req, res) => {
     if (search) {
       const escapedSearch = escapeRegex(search);
 
-      filter.$or = [
-        { name: { $regex: escapedSearch, $options: "i" } },
-        { client: { $regex: escapedSearch, $options: "i" } },
+      filter.$and = [
+        {
+          $or: [
+            { name: { $regex: escapedSearch, $options: "i" } },
+            { client: { $regex: escapedSearch, $options: "i" } },
+          ],
+        },
       ];
     }
 
@@ -94,33 +98,7 @@ const createProject = async (req, res) => {
 };
 
 const getProjectById = async (req, res) => {
-  try {
-    const { projectId } = req.params;
-
-    if (!mongoose.Types.ObjectId.isValid(projectId)) {
-      return res.status(400).json({
-        message: "Invalid project ID",
-      });
-    }
-
-    const project = await Project.findOne({
-      _id: projectId,
-      owner: req.user.id,
-    });
-
-    if (!project) {
-      return res.status(404).json({
-        message: "Project not found",
-      });
-    }
-
-    res.json(project);
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({
-      message: "Failed to fetch project",
-    });
-  }
+  return res.status(200).json(req.project);
 };
 
 const updateProject = async (req, res) => {

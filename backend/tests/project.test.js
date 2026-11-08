@@ -517,3 +517,43 @@ test("DELETE /api/projects/:id deletes the authenticated user's project", async 
 
   assert.equal(deletedProject, null);
 });
+
+test("Viewer can access a shared project", async () => {
+  const owner = await User.create({
+    name: "Owner",
+    email: "owner-team@example.com",
+    password: "password123",
+  });
+
+  const viewer = await User.create({
+    name: "Viewer",
+    email: "viewer-team@example.com",
+    password: "password123",
+  });
+
+  const project = await Project.create({
+    name: "Team Project",
+    client: "ABC Company",
+    deadline: "2026-12-31",
+    budget: 10000,
+    owner: owner._id,
+    members: [
+      {
+        user: viewer._id,
+        role: "Viewer",
+      },
+    ],
+  });
+
+  const agent = request.agent(app);
+
+  await agent.post("/api/auth/login").send({
+    email: "viewer-team@example.com",
+    password: "password123",
+  });
+
+  const response = await agent.get(`/api/projects/${project._id}`);
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.name, "Team Project");
+});

@@ -5,24 +5,33 @@ const getDashboardSummary = async (req, res, next) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
+    // Projects owned by or shared with the logged-in user
+    const accessFilter = {
+      $or: [{ owner: req.user.id }, { "members.user": req.user.id }],
+    };
+
     const completedProjects = await Project.countDocuments({
-      owner: req.user.id,
+      ...accessFilter,
       status: "Completed",
     });
+
     const activeProjects = await Project.countDocuments({
-      owner: req.user.id,
+      ...accessFilter,
       status: "In Progress",
     });
+
     const highPriorityProjects = await Project.countDocuments({
-      owner: req.user.id,
+      ...accessFilter,
       priority: "High",
     });
+
     const overdueProjects = await Project.countDocuments({
-      owner: req.user.id,
+      ...accessFilter,
       status: { $ne: "Completed" },
       deadline: { $lt: today },
     });
-    const totalProjects = await Project.countDocuments({ owner: req.user.id });
+
+    const totalProjects = await Project.countDocuments(accessFilter);
 
     return res.status(200).json({
       completedProjects,
