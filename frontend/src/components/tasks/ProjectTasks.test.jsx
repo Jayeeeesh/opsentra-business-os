@@ -62,7 +62,7 @@ test("displays project tasks", async () => {
 test("updates task status", async () => {
   mockTaskApi();
 
-  render(<ProjectTasks projectId="project-1" />);
+  render(<ProjectTasks projectId="project-1" canEditTasks={true} />);
 
   const dropdown = await screen.findByRole("combobox", {
     name: "Status for Build Login API",
@@ -82,7 +82,7 @@ test("deletes a task after confirmation", async () => {
 
   vi.spyOn(window, "confirm").mockReturnValue(true);
 
-  render(<ProjectTasks projectId="project-1" />);
+  render(<ProjectTasks projectId="project-1" canEditTasks={true} />);
 
   await screen.findByText("Build Login API");
 
@@ -95,4 +95,31 @@ test("deletes a task after confirmation", async () => {
   await waitFor(() => {
     expect(screen.queryByText("Build Login API")).not.toBeInTheDocument();
   });
+});
+
+test("Viewer can see tasks but cannot modify them", async () => {
+  mockTaskApi();
+
+  render(<ProjectTasks projectId="project-1" canEditTasks={false} />);
+
+  // Viewer can see the task
+  expect(await screen.findByText("Build Login API")).toBeInTheDocument();
+
+  // Status is read-only
+  expect(screen.getByText("Status: To Do")).toBeInTheDocument();
+
+  // Editing controls are hidden
+  expect(
+    screen.queryByRole("button", { name: "Add Task" }),
+  ).not.toBeInTheDocument();
+
+  expect(
+    screen.queryByRole("button", { name: "Delete" }),
+  ).not.toBeInTheDocument();
+
+  expect(
+    screen.queryByRole("combobox", {
+      name: "Status for Build Login API",
+    }),
+  ).not.toBeInTheDocument();
 });

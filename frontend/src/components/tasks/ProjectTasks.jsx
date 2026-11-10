@@ -3,7 +3,7 @@ import AddTaskForm from "./AddTaskForm";
 
 const API_URL = import.meta.env.VITE_API_URL;
 
-function ProjectTasks({ projectId }) {
+function ProjectTasks({ projectId, canEditTasks = false }) {
   const [tasks, setTasks] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
@@ -119,12 +119,15 @@ function ProjectTasks({ projectId }) {
           {actionError}
         </p>
       )}
-      <AddTaskForm
-        projectId={projectId}
-        onTaskCreated={(newTask) => {
-          setTasks((prev) => [newTask, ...prev]);
-        }}
-      />
+
+      {canEditTasks && (
+        <AddTaskForm
+          projectId={projectId}
+          onTaskCreated={(newTask) => {
+            setTasks((prev) => [newTask, ...prev]);
+          }}
+        />
+      )}
 
       {isLoading && <p>Loading tasks...</p>}
 
@@ -151,26 +154,34 @@ function ProjectTasks({ projectId }) {
                   {task.priority ?? "Medium"}
                 </span>
               </div>
-              <select
-                value={task.status}
-                onChange={(event) =>
-                  handleStatusChange(task._id, event.target.value)
-                }
-                aria-label={`Status for ${task.title}`}
-                className="mt-2 rounded-lg border border-slate-300 p-2"
-              >
-                <option value="To Do">To Do</option>
-                <option value="In Progress">In Progress</option>
-                <option value="Completed">Completed</option>
-              </select>
-              <button
-                type="button"
-                onClick={() => handleDeleteTask(task._id)}
-                disabled={deletingTaskId === task._id}
-                className="ml-3 rounded-lg border border-red-300 px-3 py-2 text-red-600 disabled:opacity-50"
-              >
-                {deletingTaskId === task._id ? "Deleting..." : "Delete"}
-              </button>
+              {canEditTasks ? (
+                <select
+                  value={task.status}
+                  onChange={(event) =>
+                    handleStatusChange(task._id, event.target.value)
+                  }
+                  aria-label={`Status for ${task.title}`}
+                  className="mt-2 rounded-lg border border-slate-300 p-2"
+                >
+                  <option value="To Do">To Do</option>
+                  <option value="In Progress">In Progress</option>
+                  <option value="Completed">Completed</option>
+                </select>
+              ) : (
+                <p className="mt-2 text-sm text-slate-600">
+                  Status: {task.status}
+                </p>
+              )}
+              {canEditTasks && (
+                <button
+                  type="button"
+                  onClick={() => handleDeleteTask(task._id)}
+                  disabled={deletingTaskId === task._id}
+                  className="ml-3 rounded-lg border border-red-300 px-3 py-2 text-red-600 disabled:opacity-50"
+                >
+                  {deletingTaskId === task._id ? "Deleting..." : "Delete"}
+                </button>
+              )}
             </li>
           ))}
         </ul>
