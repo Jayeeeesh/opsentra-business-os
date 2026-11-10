@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router";
 import { afterEach, expect, test, vi } from "vitest";
 import ProjectDetailsPage from "./ProjectDetailsPage";
@@ -6,6 +6,12 @@ import ProjectDetailsPage from "./ProjectDetailsPage";
 // Tasks ko mock kar rahe hain taaki sirf Project Details test ho.
 vi.mock("../components/tasks/ProjectTasks", () => ({
   default: () => null,
+}));
+
+vi.mock("../hooks/useAuth", () => ({
+  default: () => ({
+    user: { id: "owner-123" },
+  }),
 }));
 
 const project = {
@@ -18,6 +24,7 @@ const project = {
   budget: 25000,
   progress: 40,
   description: "Hotel management application",
+  owner: "owner-123",
 };
 
 function renderPage() {
@@ -135,4 +142,127 @@ test("aborts the request when the page unmounts", () => {
   unmount();
 
   expect(signal.aborted).toBe(true);
+});
+
+test("does not show Edit Project link to non-owner", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        ...project,
+        owner: "user-456",
+      }),
+    })),
+  );
+
+  renderPage();
+
+  expect(
+    await screen.findByRole("heading", {
+      name: "Hotel Website",
+    }),
+  ).toBeInTheDocument();
+
+  expect(
+    screen.queryByRole("link", {
+      name: "Edit Project",
+    }),
+  ).not.toBeInTheDocument();
+});
+
+test("Owner can update a member role", async () => {
+  const fetchMock = vi.fn(async (url, options = {}) => {
+    if (options.method === "PATCH") {
+      return {
+        ok: true,
+        json: async () => ({
+          member: {
+            user: "member-456",
+            role: "Editor",
+          },
+        }),
+      };
+    }
+
+    return {
+      ok: true,
+      status: 200,
+      json: async () => ({
+        ...project,
+        owner: "owner-123",
+        members: [{ user: "member-456", role: "Viewer" }],
+      }),
+    };
+  });
+
+  vi.stubGlobal("fetch", fetchMock);
+
+  renderPage();
+
+  const dropdown = await screen.findByRole("combobox", {
+    name: "Role for member 1",
+  });
+
+  fireEvent.change(dropdown, {
+    target: { value: "Editor" },
+  });
+
+  await waitFor(() => {
+    expect(dropdown).toHaveValue("Editor");
+  });
+
+  expect(fetchMock).toHaveBeenCalledWith(
+    expect.stringContaining("/api/projects/project-123/members/member-456"),
+    expect.objectContaining({
+      method: "PATCH",
+      credentials: "include",
+      body: JSON.stringify({ role: "Editor" }),
+    }),
+  );
+});
+
+test("Owner can remove a project member", async () => {
+  const fetchMock = vi.fn(async (url, options = {}) => {
+    if (options.method === "DELETE") {
+      return { ok: true, status: 200 };
+    }
+
+    return {
+      ok: true,
+      status: 200,
+      json: async () => ({
+        ...project,
+        members: [{ user: "member-456", role: "Viewer" }],
+      }),
+    };
+  });
+
+  vi.stubGlobal("fetch", fetchMock);
+  vi.spyOn(window, "confirm").mockReturnValue(true);
+
+  renderPage();
+
+  const removeButton = await screen.findByRole("button", {
+    name: "Remove",
+  });
+
+  fireEvent.click(removeButton);
+
+  await waitFor(() => {
+    expect(
+      screen.getByRole("heading", {
+        name: "Team Members (0)",
+      }),
+    ).toBeInTheDocument();
+  });
+
+  expect(fetchMock).toHaveBeenCalledWith(
+    expect.stringContaining("/api/projects/project-123/members/member-456"),
+    expect.objectContaining({
+      method: "DELETE",
+      credentials: "include",
+    }),
+  );
 });
