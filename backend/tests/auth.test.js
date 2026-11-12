@@ -3,6 +3,7 @@ const assert = require("node:assert/strict");
 const request = require("supertest");
 
 process.env.JWT_SECRET = "test-jwt-secret";
+const jwt = require("jsonwebtoken");
 
 const app = require("../app");
 const User = require("../models/User");
@@ -112,4 +113,87 @@ test("POST /api/auth/logout clears the authenticated session", async () => {
   const response = await agent.get("/api/auth/me");
 
   assert.equal(response.statusCode, 401);
+});
+
+test("GET /api/auth/me rejects expired JWT", async () => {
+  const expiredToken = jwt.sign(
+    { userId: "test-user-id" },
+    process.env.JWT_SECRET,
+    { expiresIn: -10 },
+  );
+
+  const response = await request(app)
+    .get("/api/auth/me")
+    .set("Cookie", `token=${expiredToken}`);
+
+  assert.equal(response.statusCode, 401);
+  assert.equal(response.body.message, "Invalid or expired token");
+});
+
+test("GET /api/auth/me rejects invalid JWT", async () => {
+  const invalidToken = jwt.sign({ userId: "test-user-id" }, "wrong-secret", {
+    expiresIn: "1h",
+  });
+
+  const response = await request(app)
+    .get("/api/auth/me")
+    .set("Cookie", `token=${invalidToken}`);
+
+  assert.equal(response.statusCode, 401);
+  assert.equal(response.body.message, "Invalid or expired token");
+});
+
+test("POST /api/auth/login sets secure cookie attributes", async () => {
+  await User.create({
+    name: "Test User",
+    email: "test@example.com",
+    password: "password123",
+  });
+
+  const response = await request(app).post("/api/auth/login").send({
+    email: "test@example.com",
+    password: "password123",
+  });
+
+  assert.equal(response.statusCode, 200);
+
+  const cookie = response.headers["set-cookie"]?.[0];
+
+  assert.ok(cookie);
+  assert.match(cookie, /HttpOnly/i);
+  assert.match(cookie, /SameSite=Lax/i);
+});
+
+test("POST /api/auth/login sets production cookie attributes", async () => {
+  await User.create({
+    name: "Test User",
+    email: "test@example.com",
+    password: "password123",
+  });
+
+  const originalNodeEnv = process.env.NODE_ENV;
+
+  try {
+    process.env.NODE_ENV = "production";
+
+    const response = await request(app).post("/api/auth/login").send({
+      email: "test@example.com",
+      password: "password123",
+    });
+
+    assert.equal(response.statusCode, 200);
+
+    const cookie = response.headers["set-cookie"]?.[0];
+
+    assert.ok(cookie);
+    assert.match(cookie, /HttpOnly/i);
+    assert.match(cookie, /;\s*Secure(?:;|$)/i);
+    assert.match(cookie, /SameSite=None/i);
+  } finally {
+    if (originalNodeEnv === undefined) {
+      delete process.env.NODE_ENV;
+    } else {
+      process.env.NODE_ENV = originalNodeEnv;
+    }
+  }
 });
