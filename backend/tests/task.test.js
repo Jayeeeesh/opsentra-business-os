@@ -10,6 +10,7 @@ const Project = require("../models/Project");
 const Task = require("../models/Task");
 
 const { connectTestDb, disconnectTestDb } = require("./helpers/testDb");
+const browserAgent = require("./helpers/browserAgent");
 
 before(connectTestDb);
 
@@ -36,7 +37,7 @@ test("User can create task in own project", async () => {
     owner: user._id,
   });
 
-  const agent = request.agent(app);
+  const agent = browserAgent(app);
 
   const login = await agent.post("/api/auth/login").send({
     email: "test@example.com",
@@ -82,7 +83,7 @@ test("User cannot create task in another user's project", async () => {
     owner: owner._id,
   });
 
-  const agent = request.agent(app);
+  const agent = browserAgent(app);
 
   await agent.post("/api/auth/login").send({
     email: "other@example.com",
@@ -117,7 +118,7 @@ test("GET tasks returns project tasks", async () => {
     project: project._id,
   });
 
-  const agent = request.agent(app);
+  const agent = browserAgent(app);
 
   await agent.post("/api/auth/login").send({
     email: "gettasks@example.com",
@@ -165,7 +166,7 @@ test("Viewer can read tasks in a shared project", async () => {
     project: project._id,
   });
   // 4. Login as viewer
-  const agent = request.agent(app);
+  const agent = browserAgent(app);
 
   await agent.post("/api/auth/login").send({
     email: "viewer-shared@example.com",
@@ -207,7 +208,7 @@ test("GET tasks blocks another user's project", async () => {
     project: project._id,
   });
 
-  const agent = request.agent(app);
+  const agent = browserAgent(app);
 
   await agent.post("/api/auth/login").send({
     email: "taskother@example.com",
@@ -240,7 +241,7 @@ test("PATCH updates task status", async () => {
     project: project._id,
   });
 
-  const agent = request.agent(app);
+  const agent = browserAgent(app);
 
   await agent.post("/api/auth/login").send({
     email: "patch@example.com",
@@ -297,7 +298,7 @@ test("Editor can update a shared project task", async () => {
   });
 
   // 4. Login as Editor
-  const agent = request.agent(app);
+  const agent = browserAgent(app);
 
   await agent.post("/api/auth/login").send({
     email: "editor-shared@example.com",
@@ -349,7 +350,7 @@ test("Editor can create a task in a shared project", async () => {
     ],
   });
   // 3. Login as Editor
-  const agent = request.agent(app);
+  const agent = browserAgent(app);
   const login = await agent.post("/api/auth/login").send({
     email: "editor-shared@example.com",
     password: "password123",
@@ -409,7 +410,7 @@ test("Editor can delete a shared project task", async () => {
   });
   // 4. Login as Editor
 
-  const agent = request.agent(app);
+  const agent = browserAgent(app);
 
   const login = await agent.post("/api/auth/login").send({
     email: "editor-shared@example.com",
@@ -466,7 +467,7 @@ test("Viewer cannot update a shared project task", async () => {
     project: project._id,
   });
   // 4. Login as Viewer
-  const agent = request.agent(app);
+  const agent = browserAgent(app);
 
   const login = await agent.post("/api/auth/login").send({
     email: "Viewer-shared@example.com",
@@ -518,7 +519,7 @@ test("Viewer cannot create a task in a shared project", async () => {
   });
 
   // 3. Login as Viewer and verify 200
-  const agent = request.agent(app);
+  const agent = browserAgent(app);
 
   const login = await agent.post("/api/auth/login").send({
     email: "Viewer-shared@example.com",
@@ -576,7 +577,7 @@ test("Viewer cannot delete a shared project task", async () => {
     project: project._id,
   });
 
-  const agent = request.agent(app);
+  const agent = browserAgent(app);
 
   const login = await agent.post("/api/auth/login").send({
     email: "Viewer-shared@example.com",
@@ -622,7 +623,7 @@ test("PATCH blocks another user's task update", async () => {
     project: project._id,
   });
 
-  const agent = request.agent(app);
+  const agent = browserAgent(app);
 
   await agent.post("/api/auth/login").send({
     email: "taskother@example.com",
@@ -660,7 +661,7 @@ test("DELETE removes task from own project", async () => {
     project: project._id,
   });
 
-  const agent = request.agent(app);
+  const agent = browserAgent(app);
 
   await agent.post("/api/auth/login").send({
     email: "delete@example.com",
@@ -704,7 +705,7 @@ test("DELETE blocks another user's task", async () => {
     project: project._id,
   });
 
-  const agent = request.agent(app);
+  const agent = browserAgent(app);
 
   await agent.post("/api/auth/login").send({
     email: "deleteother@example.com",
@@ -743,7 +744,7 @@ test("Deleting a project removes its tasks", async () => {
     project: project._id,
   });
 
-  const agent = request.agent(app);
+  const agent = browserAgent(app);
 
   // 1. Login first
   const login = await agent.post("/api/auth/login").send({

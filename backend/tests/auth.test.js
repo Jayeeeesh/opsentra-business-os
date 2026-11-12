@@ -9,6 +9,7 @@ const app = require("../app");
 const User = require("../models/User");
 
 const { connectTestDb, disconnectTestDb } = require("./helpers/testDb");
+const browserAgent = require("./helpers/browserAgent");
 
 before(connectTestDb);
 
@@ -32,7 +33,7 @@ test("GET /api/auth/me returns current user when authenticated", async () => {
     password: "password123",
   });
 
-  const agent = request.agent(app);
+  const agent = browserAgent(app);
 
   const loginResponse = await agent.post("/api/auth/login").send({
     email: "test@example.com",
@@ -54,10 +55,13 @@ test("POST /api/auth/login returns 401 for invalid password", async () => {
     password: "password123",
   });
 
-  const response = await request(app).post("/api/auth/login").send({
-    email: "test@example.com",
-    password: "wrongpassword",
-  });
+  const response = await request(app)
+    .post("/api/auth/login")
+    .set("Origin", process.env.CLIENT_URL || "http://localhost:5173")
+    .send({
+      email: "test@example.com",
+      password: "wrongpassword",
+    });
 
   assert.equal(response.statusCode, 401);
   assert.equal(response.body.message, "Invalid email or password");
@@ -98,7 +102,7 @@ test("POST /api/auth/logout clears the authenticated session", async () => {
     password: "password123",
   });
 
-  const agent = request.agent(app);
+  const agent = browserAgent(app);
 
   const loginResponse = await agent.post("/api/auth/login").send({
     email: "test@example.com",
@@ -106,7 +110,9 @@ test("POST /api/auth/logout clears the authenticated session", async () => {
   });
   assert.equal(loginResponse.statusCode, 200);
 
-  const logoutResponse = await agent.post("/api/auth/logout");
+  const logoutResponse = await agent
+    .post("/api/auth/logout")
+    .set("Origin", process.env.CLIENT_URL || "http://localhost:5173");
 
   assert.equal(logoutResponse.statusCode, 200);
 
@@ -150,10 +156,13 @@ test("POST /api/auth/login sets secure cookie attributes", async () => {
     password: "password123",
   });
 
-  const response = await request(app).post("/api/auth/login").send({
-    email: "test@example.com",
-    password: "password123",
-  });
+  const response = await request(app)
+    .post("/api/auth/login")
+    .set("Origin", process.env.CLIENT_URL || "http://localhost:5173")
+    .send({
+      email: "test@example.com",
+      password: "password123",
+    });
 
   assert.equal(response.statusCode, 200);
 
@@ -176,10 +185,13 @@ test("POST /api/auth/login sets production cookie attributes", async () => {
   try {
     process.env.NODE_ENV = "production";
 
-    const response = await request(app).post("/api/auth/login").send({
-      email: "test@example.com",
-      password: "password123",
-    });
+    const response = await request(app)
+      .post("/api/auth/login")
+      .set("Origin", process.env.CLIENT_URL || "http://localhost:5173")
+      .send({
+        email: "test@example.com",
+        password: "password123",
+      });
 
     assert.equal(response.statusCode, 200);
 
@@ -196,4 +208,55 @@ test("POST /api/auth/login sets production cookie attributes", async () => {
       process.env.NODE_ENV = originalNodeEnv;
     }
   }
+});
+
+test("POST /api/auth/logout rejects untrusted origin", async () => {
+  const response = await request(app)
+    .post("/api/auth/logout")
+    .set("Origin", "https://attacker.example");
+
+  assert.equal(response.statusCode, 403);
+});
+
+test("POST /api/auth/logout allows trusted origin", async () => {
+  const trustedOrigin = process.env.CLIENT_URL || "http://localhost:5173";
+
+  const response = await request(app)
+    .post("/api/auth/logout")
+    .set("Origin", new URL(trustedOrigin).origin);
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.body.message, "Logged out successfully");
+});
+
+test("POST /api/auth/logout rejects cross-site request without Origin", async () => {
+  const response = await request(app)
+    .post("/api/auth/logout")
+    .set("Sec-Fetch-Site", "cross-site")
+    .set("Cookie", "token=test-token");
+
+  assert.equal(response.statusCode, 403);
+});
+
+test("POST /api/auth/logout rejects cookie request without origin metadata", async () => {
+  const response = await request(app)
+    .post("/api/auth/logout")
+    .set("Cookie", "token=test-token");
+
+  assert.equal(response.statusCode, 403);
+});
+
+test("POST /api/auth/login rejects missing Origin", async () => {
+  await User.create({
+    name: "Test User",
+    email: "test@example.com",
+    password: "password123",
+  });
+
+  const response = await request(app).post("/api/auth/login").send({
+    email: "test@example.com",
+    password: "password123",
+  });
+
+  assert.equal(response.statusCode, 403);
 });

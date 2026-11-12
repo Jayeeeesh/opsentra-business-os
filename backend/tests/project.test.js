@@ -8,6 +8,7 @@ const User = require("../models/User");
 const Project = require("../models/Project");
 
 const { connectTestDb, disconnectTestDb } = require("./helpers/testDb");
+const browserAgent = require("./helpers/browserAgent");
 
 const app = require("../app");
 
@@ -34,7 +35,7 @@ test("POST /api/projects creates a project for authenticated user", async () => 
     password: "password123",
   });
 
-  const agent = request.agent(app);
+  const agent = browserAgent(app);
 
   const loginResponse = await agent.post("/api/auth/login").send({
     email: "test@example.com",
@@ -63,7 +64,7 @@ test("POST /api/projects rejects invalid priority", async () => {
     password: "password123",
   });
 
-  const agent = request.agent(app);
+  const agent = browserAgent(app);
 
   await agent.post("/api/auth/login").send({
     email: "test@example.com",
@@ -115,7 +116,7 @@ test("GET /api/projects returns only the authenticated user's projects", async (
     owner: userB._id,
   });
 
-  const agent = request.agent(app);
+  const agent = browserAgent(app);
 
   const loginResponse = await agent.post("/api/auth/login").send({
     email: "usera@example.com",
@@ -161,7 +162,7 @@ test("GET /api/projects supports pagination", async () => {
     },
   ]);
 
-  const agent = request.agent(app);
+  const agent = browserAgent(app);
 
   await agent.post("/api/auth/login").send({
     email: "test@example.com",
@@ -203,7 +204,7 @@ test("GET /api/projects supports search", async () => {
     },
   ]);
 
-  const agent = request.agent(app);
+  const agent = browserAgent(app);
 
   await agent.post("/api/auth/login").send({
     email: "test@example.com",
@@ -242,7 +243,7 @@ test("GET /api/projects treats regex special characters as literal search text",
     },
   ]);
 
-  const agent = request.agent(app);
+  const agent = browserAgent(app);
 
   await agent.post("/api/auth/login").send({
     email: "test@example.com",
@@ -295,7 +296,7 @@ test("GET /api/projects supports status and priority filters", async () => {
     },
   ]);
 
-  const agent = request.agent(app);
+  const agent = browserAgent(app);
 
   await agent.post("/api/auth/login").send({
     email: "test@example.com",
@@ -343,7 +344,7 @@ test("GET /api/projects supports sorting by budget high to low", async () => {
     },
   ]);
 
-  const agent = request.agent(app);
+  const agent = browserAgent(app);
 
   await agent.post("/api/auth/login").send({
     email: "test@example.com",
@@ -367,7 +368,7 @@ test("GET /api/projects rejects invalid query parameters", async () => {
     password: "password123",
   });
 
-  const agent = request.agent(app);
+  const agent = browserAgent(app);
 
   await agent.post("/api/auth/login").send({
     email: "test@example.com",
@@ -406,7 +407,7 @@ test("GET /api/projects/:id blocks access to another user's project", async () =
     owner: userA._id,
   });
 
-  const agent = request.agent(app);
+  const agent = browserAgent(app);
 
   const loginResponse = await agent.post("/api/auth/login").send({
     email: "userb@example.com",
@@ -435,7 +436,7 @@ test("PATCH /api/projects/:id updates the authenticated user's project", async (
     owner: user._id,
   });
 
-  const agent = request.agent(app);
+  const agent = browserAgent(app);
 
   const loginResponse = await agent.post("/api/auth/login").send({
     email: "test@example.com",
@@ -468,7 +469,7 @@ test("PATCH /api/projects/:id rejects invalid priority", async () => {
     owner: user._id,
   });
 
-  const agent = request.agent(app);
+  const agent = browserAgent(app);
 
   await agent.post("/api/auth/login").send({
     email: "test@example.com",
@@ -502,7 +503,7 @@ test("DELETE /api/projects/:id deletes the authenticated user's project", async 
     owner: user._id,
   });
 
-  const agent = request.agent(app);
+  const agent = browserAgent(app);
 
   const loginResponse = await agent.post("/api/auth/login").send({
     email: "test@example.com",
@@ -545,7 +546,7 @@ test("Viewer can access a shared project", async () => {
     ],
   });
 
-  const agent = request.agent(app);
+  const agent = browserAgent(app);
 
   await agent.post("/api/auth/login").send({
     email: "viewer-team@example.com",
