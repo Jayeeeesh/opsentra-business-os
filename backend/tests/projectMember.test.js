@@ -10,6 +10,7 @@ const Project = require("../models/Project");
 const Task = require("../models/Task");
 
 const { connectTestDb, disconnectTestDb } = require("./helpers/testDb");
+const browserAgent = require("./helpers/browserAgent");
 
 before(connectTestDb);
 
@@ -46,7 +47,7 @@ test("Owner can add Editor to project", async () => {
   });
 
   // 4. Login as Owner
-  const agent = request.agent(app);
+  const agent = browserAgent(app);
 
   const login = await agent.post("/api/auth/login").send({
     email: "owner@example.com",
@@ -123,7 +124,7 @@ test("Editor cannot add project members", async () => {
     members: [{ user: editor._id, role: "Editor" }],
   });
 
-  const agent = request.agent(app);
+  const agent = browserAgent(app);
 
   const login = await agent.post("/api/auth/login").send({
     email: "editor@example.com",
@@ -172,7 +173,7 @@ test("Owner can change Viewer role to Editor", async () => {
     members: [{ user: viewer._id, role: "Viewer" }],
   });
 
-  const agent = request.agent(app);
+  const agent = browserAgent(app);
 
   const login = await agent.post("/api/auth/login").send({
     email: "owner@example.com",
@@ -219,7 +220,7 @@ test("Owner can remove a project member", async () => {
     members: [{ user: viewer._id, role: "Viewer" }],
   });
 
-  const ownerAgent = request.agent(app);
+  const ownerAgent = browserAgent(app);
 
   const login = await ownerAgent.post("/api/auth/login").send({
     email: "owner@example.com",
@@ -244,7 +245,7 @@ test("Owner can remove a project member", async () => {
   assert.equal(stillMember, false);
 
   // Verify removed Viewer cannot access the project
-  const viewerAgent = request.agent(app);
+  const viewerAgent = browserAgent(app);
 
   const viewerLogin = await viewerAgent.post("/api/auth/login").send({
     email: "viewer@example.com",
@@ -289,7 +290,7 @@ test("Editor cannot remove project members", async () => {
     ],
   });
 
-  const agent = request.agent(app);
+  const agent = browserAgent(app);
 
   const login = await agent.post("/api/auth/login").send({
     email: "editor@example.com",
@@ -344,7 +345,7 @@ test("Editor cannot change member roles", async () => {
     ],
   });
 
-  const agent = request.agent(app);
+  const agent = browserAgent(app);
 
   const login = await agent.post("/api/auth/login").send({
     email: "editor@example.com",
@@ -403,7 +404,7 @@ test("Editor can see shared projects but not private projects", async () => {
   });
 
   // 4. Login as Editor
-  const agent = request.agent(app);
+  const agent = browserAgent(app);
 
   const login = await agent.post("/api/auth/login").send({
     email: "editor@example.com",
@@ -471,7 +472,7 @@ test("Dashboard counts shared projects but excludes private projects", async () 
     },
   ]);
 
-  const agent = request.agent(app);
+  const agent = browserAgent(app);
 
   const login = await agent.post("/api/auth/login").send({
     email: "editor@example.com",

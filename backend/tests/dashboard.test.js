@@ -6,6 +6,7 @@ const User = require("../models/User");
 const Project = require("../models/Project");
 
 const { connectTestDb, disconnectTestDb } = require("./helpers/testDb");
+const browserAgent = require("./helpers/browserAgent");
 
 process.env.JWT_SECRET = "test-jwt-secret";
 const app = require("../app");
@@ -76,7 +77,7 @@ test("returns only the logged-in user's completed count", async () => {
     },
   ]);
 
-  const agent = request.agent(app);
+  const agent = browserAgent(app);
 
   const loginResponse = await agent.post("/api/auth/login").send({
     email: "usera@example.com",

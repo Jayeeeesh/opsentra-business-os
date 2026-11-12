@@ -11,6 +11,7 @@ const projectRoutes = require("./routes/projectRoutes");
 const authRoutes = require("./routes/authRoutes");
 const { notFound, errorHandler } = require("./middleware/errorHandler");
 const dashboardRoutes = require("./routes/dashboardRoutes");
+const validateOrigin = require("./middleware/validateOrigin");
 
 const app = express();
 
@@ -33,6 +34,8 @@ app.use(
     credentials: true,
   }),
 );
+
+app.use(validateOrigin);
 
 app.use("/api/projects", projectRoutes);
 app.use("/api/auth", authRoutes);
