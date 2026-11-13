@@ -456,11 +456,54 @@ Related tests:
 - `backend/tests/task.test.js`
 
 The local backend test suite passed:
-51 tests passed, 0 failed.
+60 tests passed, 0 failed.
 
-Further security testing remains necessary,
-including CSRF assessment, token expiration
-edge cases, and comprehensive security review.
+Security regression tests cover:
+
+- Expired and invalid JWT rejection.
+- Development and production cookie attributes.
+- Trusted and untrusted Origin validation.
+- Cross-site request rejection.
+- Missing-Origin login rejection.
+
+Frontend smoke testing verified five critical flows:
+login, dashboard, project operations,
+task operations, and logout.
+
+Further security assessment is required.
+
+#### 6.8 CSRF Protection Design
+
+File: `backend/middleware/validateOrigin.js`
+
+Opsentra uses Origin validation and Fetch Metadata
+checks to reduce CSRF risks.
+
+The middleware:
+
+- Validates POST, PUT, PATCH, and DELETE requests.
+- Allows requests from the configured CLIENT_URL.
+- Rejects untrusted origins with HTTP 403.
+- Rejects cross-site requests identified by
+  Sec-Fetch-Site when Origin is missing.
+- Rejects cookie-bearing requests without Origin.
+- Requires Origin for login requests.
+- Allows GET requests without Origin validation.
+
+The middleware runs before API routes.
+
+Security Verification:
+
+- Automated tests cover trusted and untrusted origins.
+- Missing-Origin and cross-site requests are tested.
+- All 60 backend tests passed.
+- Five critical frontend flows passed smoke testing.
+
+Limitations:
+
+- Registration without Origin remains permitted.
+- Origin validation is not a complete CSRF audit.
+- Additional security assessment is recommended.
 
 ### 7. Deployment Architecture
 
