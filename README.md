@@ -142,6 +142,43 @@ opsentra-business-os/
     └── workflows/
 ```
 
+## Local Docker Compose Setup
+
+Docker Compose runs the Opsentra backend and MongoDB
+together for local development.
+
+Requirements:
+
+- Docker Desktop
+- A configured `backend/.env` file
+
+From the repository root:
+
+```bash
+docker volume create opsentra-mongo-data
+docker compose up -d --build
+```
+
+Verify database connectivity:
+
+```bash
+curl http://localhost:5003/api/ready
+```
+
+Expected response: `{"status":"ready"}`
+
+Stop the services:
+
+```bash
+docker compose down
+```
+
+The external `opsentra-mongo-data` volume preserves
+MongoDB data when containers are recreated.
+
+This setup runs the backend and database only.
+The React frontend runs separately.
+
 ## Run Locally
 
 ### Prerequisites

@@ -1,0 +1,18 @@
+services:
+  mongodb:
+    image: mongo:8
+    volumes:
+      - opsentra-mongo-data:/data/db
+
+  backend:
+    build: ./backend
+    env_file:
+      - ./backend/.env
+    environment:
+      MONGO_URI: mongodb://mongodb:27017/opsentra_local
+    ports:
+      - "5003:5001"
+
+volumes:
+  opsentra-mongo-data:
+    external: true
