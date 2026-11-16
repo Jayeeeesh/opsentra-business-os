@@ -8,7 +8,11 @@ const errorHandler = (error, req, res, next) => {
   const statusCode = error.statusCode || 500;
 
   if (process.env.NODE_ENV !== "test") {
-    req.log.error({ err: error }, "Request failed");
+    if (statusCode >= 500) {
+      req.log.error({ err: error }, "Server request failed");
+    } else {
+      req.log.warn({ statusCode, path: req.path }, "Client request failed");
+    }
   }
 
   res.status(statusCode).json({
