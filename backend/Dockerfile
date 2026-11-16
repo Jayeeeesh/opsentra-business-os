@@ -9,4 +9,6 @@ COPY . .
 
 EXPOSE 5001
 
+USER node
+
 CMD ["npm", "start"]
