@@ -1,6 +1,20 @@
 const User = require("../models/User");
 const jwt = require("jsonwebtoken");
 
+const getCookieOptions = () => {
+  const localHttpTest =
+    process.env.LOCAL_HTTP_TEST === "true" &&
+    process.env.CLIENT_URL?.startsWith("http://localhost:");
+
+  const secure = process.env.NODE_ENV === "production" && !localHttpTest;
+
+  return {
+    httpOnly: true,
+    secure,
+    sameSite: "lax",
+  };
+};
+
 const registerUser = async (req, res) => {
   try {
     const { name, email, password } = req.body;
@@ -65,9 +79,7 @@ const loginUser = async (req, res) => {
     });
 
     res.cookie("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      ...getCookieOptions(),
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
     return res.status(200).json({
@@ -109,11 +121,7 @@ const getCurrentUser = async (req, res) => {
 };
 
 const logoutUser = (req, res) => {
-  res.clearCookie("token", {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-  });
+  res.clearCookie("token", getCookieOptions());
 
   return res.status(200).json({
     message: "Logged out successfully",
