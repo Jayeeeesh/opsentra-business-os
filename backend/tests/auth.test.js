@@ -200,7 +200,7 @@ test("POST /api/auth/login sets production cookie attributes", async () => {
     assert.ok(cookie);
     assert.match(cookie, /HttpOnly/i);
     assert.match(cookie, /;\s*Secure(?:;|$)/i);
-    assert.match(cookie, /SameSite=None/i);
+    assert.match(cookie, /SameSite=Lax/i);
   } finally {
     if (originalNodeEnv === undefined) {
       delete process.env.NODE_ENV;

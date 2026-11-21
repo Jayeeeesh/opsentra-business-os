@@ -12,6 +12,7 @@ const authRoutes = require("./routes/authRoutes");
 const { notFound, errorHandler } = require("./middleware/errorHandler");
 const dashboardRoutes = require("./routes/dashboardRoutes");
 const validateOrigin = require("./middleware/validateOrigin");
+const path = require("path");
 
 const app = express();
 
@@ -26,7 +27,19 @@ const CLIENT_URL = process.env.CLIENT_URL || "http://localhost:5173";
 
 app.use(express.json());
 app.use(cookieParser());
-app.use(helmet());
+
+const isLocalHttp = CLIENT_URL.startsWith("http://localhost:");
+
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        upgradeInsecureRequests: isLocalHttp ? null : [],
+      },
+    },
+    strictTransportSecurity: isLocalHttp ? false : undefined,
+  }),
+);
 
 app.use(
   cors({
@@ -40,6 +53,20 @@ app.use(validateOrigin);
 app.use("/api/projects", projectRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/dashboard", dashboardRoutes);
+
+// Serve React production files
+if (process.env.NODE_ENV === "production") {
+  const frontendPath = path.join(__dirname, "../frontend/dist");
+
+  app.use(express.static(frontendPath));
+
+  // Return React app for frontend routes
+  app.get(/^\/(?!api(?:\/|$)).*/, (req, res, next) => {
+    if (!req.accepts("html")) return next();
+
+    res.sendFile(path.join(frontendPath, "index.html"));
+  });
+}
 
 app.get("/", (req, res) => {
   res.json({ message: "Opsentra API is running" });
