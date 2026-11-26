@@ -1,0 +1,15 @@
+name: Opsentra Cloud Delivery
+
+on:
+    workflow_dispatch:
+
+permissions:
+    contents: read
+
+jobs:
+    prepare:
+        runs-on: ubuntu-24.04
+
+        steps:
+            - name: Verify workflow
+              run: echo "Opsentra delivery workflow initialized"
