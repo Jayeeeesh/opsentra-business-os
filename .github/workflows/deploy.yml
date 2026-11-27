@@ -1,6 +1,9 @@
 name: Opsentra Cloud Delivery
 
 on:
+    push:
+        branches:
+            - feat/ibm-cloud-cd
     workflow_dispatch:
 
 permissions:
